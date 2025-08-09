@@ -184,6 +184,11 @@ network_args = [ "block_lr_zero_threshold=0.1", "down_lr_weight=sine+.5", "mid_l
 
 You can specify the dim (rank) of the 25 blocks of the full model. Like the hierarchical learning rate, LoRA may not exist in some blocks, but always specify 25 values.
 
+For SDXL, specify 23 values.  
+Some blocks do not have LoRA, but this is for compatibility with [block-wise learning rates](./train_SDXL-en.md) in `sdxl_train.py`.  
+The mapping is:  
+`0: time/label embed, 1-9: input blocks 0-8, 10-12: mid blocks 0-2, 13-21: output blocks 0-8, 22: out`.
+
 Specify the following arguments in `--network_args`.
 
 - `block_dims`: Specify the dim (rank) of each block. Specify 25 values like `"block_dims=2,2,2,2,4,4,4,4,6,6,6,6,8,6,6,6,6,4,4,4,4,2,2,2,2"`.
