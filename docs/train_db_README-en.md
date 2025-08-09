@@ -1,148 +1,131 @@
-## This is a ChatGPT-4 English adaptation of the original document by kohya-ss ([train_db_README-ja.md](https://github.com/kohya-ss/sd-scripts/blob/main/docs/train_db_README-ja.md))
+## This is a ChatGPT-5 English adaptation of the original document by kohya-ss ([train_db_README-ja.md](https://github.com/kohya-ss/sd-scripts/blob/main/docs/train_db_README-ja.md))
 
-Introducing the DreamBooth Guide.
+# DreamBooth Guide
 
-Please also see the [common document for learning](./train_README-en.md).
+Please also see the [Common Documentation on Training](./train_README-en.md).
 
-# Overview
+## Overview
 
-DreamBooth is a technology that adds specific themes to image generation models through additional learning and generates them with specific identifiers. [View the paper here](https://arxiv.org/abs/2208.12242).
+DreamBooth is a technique for fine-tuning an image generation model to learn a specific subject, which can then be generated using a specific identifier. [Original paper](https://arxiv.org/abs/2208.12242).
 
-Specifically, it teaches the Stable Diffusion model characters and art styles, and allows them to be called with specific words like `shs` (to appear in the generated image).
+Specifically, it allows you to train a Stable Diffusion model on a character, art style, etc., and then call it in prompts with a specific token such as `shs` to make it appear in the generated images.
 
-The script is based on [Diffusers' DreamBooth](https://github.com/huggingface/diffusers/tree/main/examples/dreambooth), but has added features like the following (some of which have been implemented in the original script as well).
+This script is based on [Diffusers’ DreamBooth](https://github.com/huggingface/diffusers/tree/main/examples/dreambooth) but includes additional features (some of which have since been added to the original script):
 
-The main features of the script are as follows:
-
-- Memory-saving with 8-bit Adam optimizer and caching latents (similar to [Shivam Shrirao's version](https://github.com/ShivamShrirao/diffusers/tree/main/examples/dreambooth)).
-- Memory-saving with xformers.
-- Learning in sizes other than 512x512.
-- Quality improvement with augmentation.
-- Support for fine-tuning DreamBooth and Text Encoder + U-Net.
+Main features of this script:
+- Memory optimization using 8-bit Adam optimizer and latent caching (same as [Shivam Shrirao’s version](https://github.com/ShivamShrirao/diffusers/tree/main/examples/dreambooth)).
+- Memory optimization using xformers.
+- Training at arbitrary resolutions (not limited to 512×512).
+- Quality improvement via augmentation.
+- Supports fine-tuning both Text Encoder + U-Net, not just DreamBooth.
 - Reading and writing models in Stable Diffusion format.
 - Aspect Ratio Bucketing.
-- Support for Stable Diffusion v2.0.
+- Stable Diffusion v2.0 support.
 
-# Learning Procedure
+---
 
-Please refer to this repository's README for environment preparation.
+## Training Procedure
 
-## Data Preparation
+First, refer to this repository’s README to set up your environment.
 
-Please refer to [Preparing Learning Data](./train_README-en.md).
+### Preparing Data
 
-## Running the Learning
+See [Preparing Training Data](./train_README-en.md).
 
-Execute the script. The command for maximum memory saving is as follows (actually entered in one line). Please modify each line as necessary. It seems to work with about 12GB of VRAM.
+### Running Training
+
+Run the script. The following command minimizes VRAM usage (run as a single line). Modify arguments as needed. Works with ~12GB VRAM:
 
 ```
-accelerate launch --num_cpu_threads_per_process 1 train_db.py 
-    --pretrained_model_name_or_path=<.ckpt or .safetensord or Diffusers model directory> 
-    --dataset_config=<.toml file created in data preparation> 
-    --output_dir=<output folder for the learned model>  
-    --output_name=<file name when outputting the learned model> 
-    --save_model_as=safetensors 
-    --prior_loss_weight=1.0 
-    --max_train_steps=1600 
-    --learning_rate=1e-6 
-    --optimizer_type="AdamW8bit" 
-    --xformers 
-    --mixed_precision="fp16" 
-    --cache_latents 
-    --gradient_checkpointing
+accelerate launch --num_cpu_threads_per_process 1 train_db.py     --pretrained_model_name_or_path=<.ckpt or .safetensors or Diffusers model directory>     --dataset_config=<.toml file created during data preparation>     --output_dir=<folder to save trained model>     --output_name=<output model file name without extension>     --save_model_as=safetensors     --prior_loss_weight=1.0     --max_train_steps=1600     --learning_rate=1e-6     --optimizer_type="AdamW8bit"     --xformers     --mixed_precision="fp16"     --cache_latents     --gradient_checkpointing
 ```
 
-It is usually best to specify 1 for `num_cpu_threads_per_process`.
+**Key arguments:**
+- `num_cpu_threads_per_process`: Usually `1` is optimal.
+- `pretrained_model_name_or_path`: The base model to fine-tune (Stable Diffusion `.ckpt`/`.safetensors`, local Diffusers directory, or model ID like `"stabilityai/stable-diffusion-2"`).
+- `output_dir` & `output_name`: Save location and name for the trained model.  
+  `save_model_as=safetensors` saves in `.safetensors` format.
+- `dataset_config`: `.toml` dataset config. Initially set batch size to `1` to save VRAM.
+- `prior_loss_weight`: Weight for regularization image loss (default `1.0`).
+- `max_train_steps`: Training steps (example uses `1600`).
+- `learning_rate`: `1e-6` recommended for Stable Diffusion; Diffusers version defaults to `5e-6`.
+- `mixed_precision`: Use `"fp16"` to save VRAM (or `"bf16"` for RTX 30-series+ if supported).
+- `gradient_checkpointing`: Saves VRAM by checkpointing gradients.
+- `optimizer_type="AdamW8bit"`: Lower VRAM Adam optimizer.
+- `xformers`: Use xformers CrossAttention.  
+  If not installed or incompatible, use `mem_eff_attn` for memory-efficient CrossAttention (slower).
+- `cache_latents`: Cache VAE outputs to save VRAM (disable for augmentation).
 
-Specify the base model for additional learning in `pretrained_model_name_or_path`. You can specify a Stable Diffusion checkpoint file (.ckpt or .safetensors), a Diffusers local disk model directory, or a Diffusers model ID (such as "stabilityai/stable-diffusion-2").
+If you have more VRAM, increase batch size in `.toml` (e.g., `4` for speed & potential accuracy gain).
 
-Specify the folder to save the learned model in `output_dir`. Specify the model's file name without the extension in `output_name`. Specify saving in safetensors format with `save_model_as`.
-
-Specify the `.toml` file in `dataset_config`. For the initial batch size specification in the file, set it to `1` to keep memory consumption low.
-
-`prior_loss_weight` is the weight of the regularization image loss. Normally, specify 1.0.
-
-Set the number of training steps, `max_train_steps`, to 1600. The learning rate `learning_rate` is specified as 1e-6.
-
-Specify `mixed_precision="fp16"` for memory saving (you can also specify `bf16` for RTX 30 series and later. Match the settings made in accelerate during environment preparation). Also, specify `gradient_checkpointing`.
-
-To use the memory-efficient 8-bit AdamW optimizer, specify `optimizer_type="AdamW8bit"`.
-
-Specify the `xformers` option and use xformers' CrossAttention. If you have not installed xformers or encounter an error (depending on the environment, such as when `mixed_precision="no"`), you can specify the `mem_eff_attn` option instead to use the memory-efficient CrossAttention (which will be slower).
-
-Cache the VAE output for memory saving by specifying the `cache_latents` option.
-
-If you have enough memory, edit the `.toml` file to increase the batch size to, for example, `4` (which may potentially speed up and improve accuracy). Additionally, removing `cache_latents` enables augmentation.
+---
 
 ### Commonly Used Options
 
-Please refer to the [common document for learning](./train_README-en.md) for the following cases:
+Refer to the [Common Training Documentation](./train_README-en.md) if:
+- Training on Stable Diffusion 2.x or derivatives
+- Training a model assuming `clip_skip ≥ 2`
+- Training with captions over 75 tokens
 
-- Learning Stable Diffusion 2.x or derived models
-- Learning models that assume a clip skip of 2 or more
-- Learning with captions exceeding 75 tokens
+---
 
 ### Step Count in DreamBooth
 
-In this script, for memory saving, the number of learning times per step is half that of the original script (because the target image and regularization image are divided into separate batches for learning).
+This script uses half the training passes per step compared to the original Diffusers version, because target and regularization images are trained in separate batches.  
+To match training length with the original scripts, **double the step count**.
 
-To perform almost the same learning as the original Diffusers version and XavierXiao's Stable Diffusion version, double the number of steps.
-
-(Strictly speaking, the order of the data changes because the learning image and regularization image are shuffled together, but it is thought to have little effect on learning.)
+---
 
 ### Batch Size in DreamBooth
 
-As the whole model is learned (similar to fine-tuning), memory consumption is higher compared to learning using LoRA and other methods.
+Full-model training (like fine-tuning) consumes significantly more VRAM than LoRA training.
+
+---
 
 ### Learning Rate
 
-The Diffusers version is 5e-6, but the Stable Diffusion version is 1e-6, so the sample above specifies 1e-6.
+- Diffusers version: `5e-6`
+- Stable Diffusion version: `1e-6` (used in above example)
 
-### Command Line for Specifying Dataset in Previous Format
+---
 
-Specify resolution and batch size as options. An example of the command line is as follows:
+### Older Dataset Specification Format
+
+When specifying datasets via `--train_data_dir` and `--reg_data_dir`, also set resolution and batch size. Example:
 
 ```
-accelerate launch --num_cpu_threads_per_process 1 train_db.py 
-    --pretrained_model_name_or_path=<.ckpt or .safetensors or Diffusers version model directory>
-    --train_data_dir=<training data directory>
-    --reg_data_dir=<regularization images directory>
-    --output_dir=<trained model output directory>
-    --output_name=<trained model output filename>
-    --prior_loss_weight=1.0
-    --resolution=512
-    --train_batch_size=1
-    --learning_rate=1e-6
-    --max_train_steps=1600
-    --use_8bit_adam
-    --xformers
-    --mixed_precision="bf16"
-    --cache_latents
-    --gradient_checkpointing
+accelerate launch --num_cpu_threads_per_process 1 train_db.py     --pretrained_model_name_or_path=<.ckpt or .safetensors or Diffusers model directory>     --train_data_dir=<training data directory>     --reg_data_dir=<regularization images directory>     --output_dir=<output model directory>     --output_name=<output model file name>     --prior_loss_weight=1.0     --resolution=512     --train_batch_size=1     --learning_rate=1e-6     --max_train_steps=1600     --use_8bit_adam     --xformers     --mixed_precision="bf16"     --cache_latents     --gradient_checkpointing
 ```
 
-## Generating images with the trained model
+---
 
-Once the training is complete, a safetensors file will be output in the specified folder with the specified name.
+## Generating Images with the Trained Model
 
-For v1.4/1.5 and other derivative models, you can infer with this model using Automatic1111's WebUI. Please place it in the models\Stable-diffusion folder.
+After training, the `.safetensors` file will be saved to your output directory.
 
-To generate images with the v2.x model in the WebUI, a separate .yaml file describing the model specifications is required. For the v2.x base, place the v2-inference.yaml in the same folder, and for the 768/v, place the v2-inference-v.yaml in the folder, and name the part before the extension the same as the model.
+- **v1.4/1.5 and derivatives:** Load directly into WebUI (place in `models/Stable-diffusion`).
+- **v2.x models:** Require an additional `.yaml` config file.  
+  - v2.x base → `v2-inference.yaml`  
+  - v2.x 768/v → `v2-inference-v.yaml`  
+  Place the `.yaml` in the same directory as the model and name it identically to the model file (before the extension).
 
-![image](https://user-images.githubusercontent.com/52813779/210776915-061d79c3-6582-42c2-8884-8b91d2f07313.png)
+YAML configs are available from [Stability AI’s SD2.0 repository](https://github.com/Stability-AI/stablediffusion/tree/main/configs/stable-diffusion).
 
-Each yaml file can be found in the [Stability AI's SD2.0 repository](https://github.com/Stability-AI/stablediffusion/tree/main/configs/stable-diffusion).
+---
 
-# Other major options specific to DreamBooth
+## DreamBooth-Specific Options
 
-Please refer to the separate document for all options.
+See separate documentation for the full list.
 
-## Do not train the Text Encoder from the middle --stop_text_encoder_training
+### `--stop_text_encoder_training`
+Stops training the Text Encoder after the specified step, continuing only U-Net training.  
+This may improve quality in some cases by preventing Text Encoder overfitting.
 
-By specifying a number for the stop_text_encoder_training option, the Text Encoder training will not be performed after that step, and only the U-Net will be trained. In some cases, this may lead to improved accuracy.
+### `--no_token_padding`
+Disables tokenizer output padding (matches behavior of older Diffusers DreamBooth).
 
-(It is suspected that the Text Encoder alone may overfit first, and this option may help prevent that, but the exact impact is unknown.)
+```
+# Example: Bucketing + Augmentation
+accelerate launch --num_cpu_threads_per_process 8 train_db.py     --pretrained_model_name_or_path=<.ckpt or .safetensors or Diffusers model directory>     --train_data_dir=<training data directory>     --reg_data_dir=<regularization images directory>     --output_dir=<output model directory>     --resolution=768,512     --train_batch_size=20     --learning_rate=5e-6     --max_train_steps=800     --use_8bit_adam     --xformers     --mixed_precision="bf16"     --save_every_n_epochs=1     --save_state     --save_precision="bf16"     --logging_dir=logs     --enable_bucket     --min_bucket_reso=384     --max_bucket_reso=1280     --color_aug     --flip_aug     --gradient_checkpointing     --seed 42
+```
 
-## Do not pad the Tokenizer output --no_token_padding
-
-By specifying the no_token_padding option, the output of the Tokenizer will not be padded (this is the same behavior as the old DreamBooth of the Diffusers version).
