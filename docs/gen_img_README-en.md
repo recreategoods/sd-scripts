@@ -455,3 +455,33 @@ You can specify the VGG16 layer number to be used for feature extraction with `-
 
 - `--network_show_meta`: Display the metadata for the additional network.
 
+# About Gradual Latent
+
+Gradual Latent is a high-resolution (Hires) fix that gradually increases the size of the latent during generation.  
+`gen_img.py`, `sdxl_gen_img.py`, and `gen_img_diffusers.py` support the following options:
+
+- `--gradual_latent_timesteps`:  
+  Specifies the timestep at which to start increasing the latent size.  
+  Default: `None` (Gradual Latent disabled). Recommended starting point: `750`.
+
+- `--gradual_latent_ratio`:  
+  Specifies the initial latent size as a ratio of the default latent size.  
+  Default: `0.5` (starts at half the default size).
+
+- `--gradual_latent_ratio_step`:  
+  Specifies the increment ratio for increasing the latent size.  
+  Default: `0.125` (latent size progression: `0.5 → 0.625 → 0.75 → 0.875 → 1.0`).
+
+- `--gradual_latent_ratio_every_n_steps`:  
+  Specifies the interval (in steps) between latent size increases.  
+  Default: `3` (increases size every 3 steps).
+
+Each option can also be set via prompt shorthand options:  
+`--glt`, `--glr`, `--gls`, `--gle`.
+
+__Important__:  
+Specify `euler_a` as the sampler. The sampler source code is modified for this feature; it will not work with other samplers.
+
+Effectiveness:  
+- More effective in **SD 1.5**.  
+- Effects are minimal in **SDXL**.
