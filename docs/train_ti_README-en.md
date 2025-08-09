@@ -103,4 +103,7 @@ Please refer to another document for all options.
 
 ## Generating images with the script in this repository
 
-Specify the learned embeddings file with the `--textual_inversion_embeddings` option in gen_img_diffusers.py (multiple files allowed). Use the filename (without the extension) of the embeddings file in the prompt, and the embeddings will be applied.
+## Generating with Image Generation Scripts in This Repository
+
+In `gen_img_diffusers.py`, specify the trained embeddings file(s) using the `--textual_inversion_embeddings` option (multiple files can be specified).  
+When you use the file name of an embeddings file (without the extension) in the prompt, that embeddings will be applied.
