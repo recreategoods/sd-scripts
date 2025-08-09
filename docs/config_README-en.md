@@ -1,21 +1,29 @@
-## This is a ChatGPT-4 English adaptation of the original document by kohya-ss ([config_README-ja.md](https://github.com/kohya-ss/sd-scripts/blob/main/docs/config_README-ja.md))
+Original Source by kohya-ss
 
-This documentation explains the configuration file that can be passed using the `--dataset_config` option.
+First version:
+A.I Translation by Model: NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO, editing by Darkstorm2150
+
+Some parts are manually added.
+
+# Config Readme
+
+This README is about the configuration files that can be passed with the `--dataset_config` option.
 
 ## Overview
 
-By providing a configuration file, users can fine-tune various settings.
+By passing a configuration file, users can make detailed settings.
 
-* Multiple datasets can be configured.
-    * For example, you can set the `resolution` for each dataset and train them together.
-    * In learning methods that support both DreamBooth and fine-tuning techniques, it is possible to mix datasets using DreamBooth and fine-tuning techniques.
-* Settings can be changed for each subset.
-    * A dataset is a collection of subsets, which are created by dividing the dataset into separate image directories or metadata.
-    * Options such as `keep_tokens` and `flip_aug` can be set for each subset. On the other hand, options such as `resolution` and `batch_size` can be set for each dataset, and the values are shared among subsets belonging to the same dataset. More details are provided later.
+* Multiple datasets can be configured
+   * For example, by setting `resolution` for each dataset, they can be mixed and trained.
+   * In training methods that support both the DreamBooth approach and the fine-tuning approach, datasets of the DreamBooth method and the fine-tuning method can be mixed.
+* Settings can be changed for each subset
+   * A subset is a partition of the dataset by image directory or metadata. Several subsets make up a dataset.
+   * Options such as `keep_tokens` and `flip_aug` can be set for each subset. On the other hand, options such as `resolution` and `batch_size` can be set for each dataset, and their values are common among subsets belonging to the same dataset. More details will be provided later.
 
-The configuration file can be written in JSON or TOML format. Considering ease of writing, we recommend using [TOML](https://toml.io/ja/v1.0.0-rc.2). The following explanations assume the use of TOML.
+The configuration file format can be JSON or TOML. Considering the ease of writing, it is recommended to use [TOML](https://toml.io/ja/v1.0.0-rc.2). The following explanation assumes the use of TOML.
 
-Here is an example of a configuration file written in TOML:
+
+Here is an example of a configuration file written in TOML.
 
 ```toml
 [general]
@@ -32,7 +40,7 @@ keep_tokens = 2
   [[datasets.subsets]]
   image_dir = 'C:\hoge'
   class_tokens = 'hoge girl'
-  # This subset has keep_tokens = 2 (using the value of the parent datasets)
+  # This subset uses keep_tokens = 2 (the value of the parent datasets)
 
   [[datasets.subsets]]
   image_dir = 'C:\fuga'
@@ -45,7 +53,7 @@ keep_tokens = 2
   class_tokens = 'human'
   keep_tokens = 1
 
-# This is a fine-tuning-style dataset
+# This is a fine-tuning dataset
 [[datasets]]
 resolution = [768, 768]
 batch_size = 2
@@ -53,25 +61,25 @@ batch_size = 2
   [[datasets.subsets]]
   image_dir = 'C:\piyo'
   metadata_file = 'C:\piyo\piyo_md.json'
-  # This subset has keep_tokens = 1 (using the general value)
+  # This subset uses keep_tokens = 1 (the value of [general])
 ```
 
-In this example, three directories are trained as DreamBooth-style datasets at 512x512 (batch size 4), and one directory is trained as a fine-tuning-style dataset at 768x768 (batch size 2).
+In this example, three directories are trained as a DreamBooth-style dataset at 512x512 (batch size 4), and one directory is trained as a fine-tuning dataset at 768x768 (batch size 2).
 
-## Dataset and Subset Configuration Settings
+## Settings for datasets and subsets
 
-The settings for datasets and subsets are divided into several sections.
+Settings for datasets and subsets are divided into several registration locations.
 
 * `[general]`
-    * This section specifies options that apply to all datasets or all subsets.
-    * If an option with the same name exists in the dataset-specific and subset-specific settings, the dataset and subset-specific settings take precedence.
+    * This is where options that apply to all datasets or all subsets are specified.
+    * If there are options with the same name in the dataset-specific or subset-specific settings, the dataset-specific or subset-specific settings take precedence.
 * `[[datasets]]`
-    * `datasets` is the registration section for dataset settings. This section specifies options that apply individually to each dataset.
-    * If subset-specific settings exist, the subset-specific settings take precedence.
+    * `datasets` is where settings for datasets are registered. This is where options that apply individually to each dataset are specified.
+	* If there are subset-specific settings, the subset-specific settings take precedence.
 * `[[datasets.subsets]]`
-    * `datasets.subsets` is the registration section for subset settings. This section specifies options that apply individually to each subset.
+    * `datasets.subsets` is where settings for subsets are registered. This is where options that apply individually to each subset are specified.
 
-The following is a conceptual diagram of the correspondence between the image directories and registration sections in the previous example:
+Here is an image showing the correspondence between image directories and registration locations in the previous example.
 
 ```
 C:\
@@ -81,32 +89,32 @@ C:\
 └─ piyo  ->  [[datasets.subsets]] No.4  -->  [[datasets]] No.2   ┘
 ```
 
-Each image directory corresponds to one `[[datasets.subsets]]`. One or more `[[datasets.subsets]]` are combined to form a `[[datasets]]`. The `[general]` section includes all `[[datasets]]` and `[[datasets.subsets]]`.
+The image directory corresponds to each `[[datasets.subsets]]`. Then, multiple `[[datasets.subsets]]` are combined to form one `[[datasets]]`. All `[[datasets]]` and `[[datasets.subsets]]` belong to `[general]`.
 
-Different options can be specified for each registration section, but if an option with the same name is specified, the value in the lower registration section takes precedence. It may be easier to understand by checking how the `keep_tokens` option is handled in the previous example.
+The available options for each registration location may differ, but if the same option is specified, the value in the lower registration location will take precedence. You can check how the `keep_tokens` option is handled in the previous example for better understanding.
 
-In addition, the available options vary depending on the supported techniques of the learning method.
+Additionally, the available options may vary depending on the method that the learning approach supports.
 
-* DreamBooth-specific options
-* Fine-tuning-specific options
-* Options available when the caption dropout technique can be used
+* Options specific to the DreamBooth method
+* Options specific to the fine-tuning method
+* Options available when using the caption dropout technique
 
-In learning methods that support both DreamBooth and fine-tuning techniques, both can be used together.
-When using both, note that whether a dataset is a DreamBooth-style or fine-tuning-style is determined on a dataset-by-dataset basis, so it is not possible to mix DreamBooth-style subsets and fine-tuning-style subsets within the same dataset.
-In other words, if you want to use both of these techniques, you need to set the subsets with different techniques to belong to different datasets.
+When using both the DreamBooth method and the fine-tuning method, they can be used together with a learning approach that supports both.
+When using them together, a point to note is that the method is determined based on the dataset, so it is not possible to mix DreamBooth method subsets and fine-tuning method subsets within the same dataset.
+In other words, if you want to use both methods together, you need to set up subsets of different methods belonging to different datasets.
 
-Regarding the program's behavior, it is determined that a subset is a fine-tuning-style subset if the `metadata_file` option, which will be explained later, exists.
-Therefore, for subsets belonging to the same dataset, there is no problem as long as they are either "all have the `metadata_file` option" or "all do not have the `metadata_file` option".
+In terms of program behavior, if the `metadata_file` option exists, it is determined to be a subset of fine-tuning. Therefore, for subsets belonging to the same dataset, as long as they are either "all have the `metadata_file` option" or "all have no `metadata_file` option," there is no problem.
 
-The following describes the available options. For options with the same name as command-line arguments, the basic explanation is omitted. Please refer to the other READMEs.
+Below, the available options will be explained. For options with the same name as the command-line argument, the explanation will be omitted in principle. Please refer to other READMEs.
 
-### Common Options for All Learning Methods
+### Common options for all learning methods
 
-These options can be specified regardless of the learning method.
+These are options that can be specified regardless of the learning method.
 
-#### Dataset-specific Options
+#### Data set specific options
 
-These options are related to dataset settings and cannot be written in `datasets.subsets`.
+These are options related to the configuration of the data set. They cannot be described in `datasets.subsets`.
+
 
 | Option Name | Example Setting | `[general]` | `[[datasets]]` |
 | ---- | ---- | ---- | ---- |
@@ -119,15 +127,17 @@ These options are related to dataset settings and cannot be written in `datasets
 | `resolution` | `256`, `[512, 512]` | o | o |
 
 * `batch_size`
-    * Equivalent to the command line argument `--train_batch_size`.
+    * This corresponds to the command-line argument `--train_batch_size`.
+* `max_bucket_reso`, `min_bucket_reso`
+    * Specify the maximum and minimum resolutions of the bucket. It must be divisible by `bucket_reso_steps`.
 
-These settings are fixed for each dataset. In other words, subsets belonging to the same dataset will share these settings. For example, if you want to prepare datasets with different resolutions, you can define them as separate datasets, as shown in the example above, and set different resolutions.
+These settings are fixed per dataset. That means that subsets belonging to the same dataset will share these settings. For example, if you want to prepare datasets with different resolutions, you can define them as separate datasets as shown in the example above, and set different resolutions for each.
 
-#### Subset-specific options
+#### Options for Subsets
 
-These are options related to the configuration of subsets.
+These options are related to subset configuration.
 
-| Option name | Example | `[general]` | `[[datasets]]` | `[[dataset.subsets]]` |
+| Option Name | Example | `[general]` | `[[datasets]]` | `[[dataset.subsets]]` |
 | ---- | ---- | ---- | ---- | ---- |
 | `color_aug` | `false` | o | o | o |
 | `face_crop_aug_range` | `[1.0, 3.0]` | o | o | o |
@@ -136,80 +146,100 @@ These are options related to the configuration of subsets.
 | `num_repeats` | `10` | o | o | o |
 | `random_crop` | `false` | o | o | o |
 | `shuffle_caption` | `true` | o | o | o |
+| `caption_prefix` | `"masterpiece, best quality, "` | o | o | o |
+| `caption_suffix` | `", from side"` | o | o | o |
+| `caption_separator` |  (not specified) | o | o | o |
+| `keep_tokens_separator` | `“|||”` | o | o | o |
+| `secondary_separator` | `“;;;”` | o | o | o |
+| `enable_wildcard` | `true` | o | o | o |
 
 * `num_repeats`
-    * Specifies the number of times the images in the subset are repeated. It corresponds to `--dataset_repeats` in fine-tuning, but `num_repeats` can be specified for any learning method.
+    * Specifies the number of repeats for images in a subset. This is equivalent to `--dataset_repeats` in fine-tuning but can be specified for any training method.
+* `caption_prefix`, `caption_suffix`
+    * Specifies the prefix and suffix strings to be appended to the captions. Shuffling is performed with these strings included. Be cautious when using `keep_tokens`.
+* `caption_separator`
+    * Specifies the string to separate the tags. The default is `,`. This option is usually not necessary to set.
+* `keep_tokens_separator`
+    * Specifies the string to separate the parts to be fixed in the caption. For example, if you specify `aaa, bbb ||| ccc, ddd, eee, fff ||| ggg, hhh`, the parts `aaa, bbb` and `ggg, hhh` will remain, and the rest will be shuffled and dropped. The comma in between is not necessary. As a result, the prompt will be `aaa, bbb, eee, ccc, fff, ggg, hhh` or `aaa, bbb, fff, ccc, eee, ggg, hhh`, etc.
+* `secondary_separator`
+    * Specifies an additional separator. The part separated by this separator is treated as one tag and is shuffled and dropped. It is then replaced by `caption_separator`. For example, if you specify `aaa;;;bbb;;;ccc`, it will be replaced by `aaa,bbb,ccc` or dropped together.
+* `enable_wildcard`
+    * Enables wildcard notation. This will be explained later.
 
-### Options exclusive to DreamBooth method
+### DreamBooth-specific options
 
-The options for the DreamBooth method exist only for subset-specific options.
+DreamBooth-specific options only exist as subsets-specific options.
 
 #### Subset-specific options
 
-These are options related to the configuration of subsets in the DreamBooth method.
+Options related to the configuration of DreamBooth subsets.
 
-| Option name | Example | `[general]` | `[[datasets]]` | `[[dataset.subsets]]` |
+| Option Name | Example Setting | `[general]` | `[[datasets]]` | `[[dataset.subsets]]` |
 | ---- | ---- | ---- | ---- | ---- |
-| `image_dir` | `‘C:\hoge’` | - | - | o (required) |
+| `image_dir` | `'C:\hoge'` | - | - | o (required) |
 | `caption_extension` | `".txt"` | o | o | o |
-| `class_tokens` | `“sks girl”` | - | - | o |
+| `class_tokens` | `"sks girl"` | - | - | o |
+| `cache_info` | `false` | o | o | o |
 | `is_reg` | `false` | - | - | o |
 
-Please note that the `image_dir` must specify a path where the image files are placed directly. In the traditional DreamBooth method, images needed to be placed in subdirectories, but this is not compatible with that specification. Also, even if you name the folder like `5_cat`, the repetition count and class name of the images will not be reflected. If you want to set these individually, you need to explicitly specify `num_repeats` and `class_tokens`.
+Firstly, note that for `image_dir`, the path to the image files must be specified as being directly in the directory. Unlike the previous DreamBooth method, where images had to be placed in subdirectories, this is not compatible with that specification. Also, even if you name the folder something like "5_cat", the number of repeats of the image and the class name will not be reflected. If you want to set these individually, you will need to explicitly specify them using `num_repeats` and `class_tokens`.
 
 * `image_dir`
-    * Specifies the path of the image directory. This is a required option.
-    * Images must be placed directly in the directory.
+    * Specifies the path to the image directory. This is a required option.
+    * Images must be placed directly under the directory.
 * `class_tokens`
     * Sets the class tokens.
-    * It will be used during training only if there is no corresponding caption file for the image. The determination of whether to use it is made on a per-image basis. If you do not specify `class_tokens` and no caption file is found, an error will occur.
+    * Only used during training when a corresponding caption file does not exist. The determination of whether or not to use it is made on a per-image basis. If `class_tokens` is not specified and a caption file is not found, an error will occur.
+* `cache_info`
+    * Specifies whether to cache the image size and caption. If not specified, it is set to `false`. The cache is saved in `metadata_cache.json` in `image_dir`.
+    * Caching speeds up the loading of the dataset after the first time. It is effective when dealing with thousands of images or more.
 * `is_reg`
-    * Specifies whether the images in the subset are for normalization or not. If not specified, it is treated as `false`, meaning the images are not for normalization.
+    * Specifies whether the subset images are for normalization. If not specified, it is set to `false`, meaning that the images are not for normalization.
 
-### Options exclusive to fine-tuning method
+### Fine-tuning method specific options
 
-The options for the fine-tuning method exist only for subset-specific options.
+The options for the fine-tuning method only exist for subset-specific options.
 
 #### Subset-specific options
 
-These are options related to the configuration of subsets in the fine-tuning method.
+These options are related to the configuration of the fine-tuning method's subsets.
 
-| Option name | Example | `[general]` | `[[datasets]]` | `[[dataset.subsets]]` |
+| Option name | Example setting | `[general]` | `[[datasets]]` | `[[dataset.subsets]]` |
 | ---- | ---- | ---- | ---- | ---- |
-| `image_dir` | `‘C:\hoge’` | - | - | o |
+| `image_dir` | `'C:\hoge'` | - | - | o |
 | `metadata_file` | `'C:\piyo\piyo_md.json'` | - | - | o (required) |
 
 * `image_dir`
-    * Specifies the path of the image directory. Unlike the DreamBooth method, this is not a required specification, but it is recommended to set it.
-        * The situation where you do not need to specify it is when you have executed with `--full_path` when creating the metadata file.
-    * Images must be placed directly in the directory.
+    * Specify the path to the image directory. Unlike the DreamBooth method, specifying it is not mandatory, but it is recommended to do so.
+        * The case where it is not necessary to specify is when the `--full_path` is added to the command line when generating the metadata file.
+    * The images must be placed directly under the directory.
 * `metadata_file`
-    * Specifies the path of the metadata file used in the subset. This is a required option.
-        * Equivalent to the command line argument `--in_json`.
-    * Since the specification requires you to specify the metadata file for each subset, it is better to avoid creating metadata that spans directories in a single metadata file. It is strongly recommended to prepare a metadata file for each image directory and register them as separate subsets.
+    * Specify the path to the metadata file used for the subset. This is a required option.
+        * It is equivalent to the command-line argument `--in_json`.
+    * Due to the specification that a metadata file must be specified for each subset, it is recommended to avoid creating a metadata file with images from different directories as a single metadata file. It is strongly recommended to prepare a separate metadata file for each image directory and register them as separate subsets.
 
-### Options available when the caption dropout method can be used
+### Options available when caption dropout method can be used
 
-Caption dropout method options exist only for subset-specific options. Regardless of whether it is the DreamBooth method or the fine-tuning method, you can specify it if the learning method supports caption dropout.
+The options available when the caption dropout method can be used exist only for subsets. Regardless of whether it's the DreamBooth method or fine-tuning method, if it supports caption dropout, it can be specified.
 
 #### Subset-specific options
 
-These are options related to the configuration of subsets when the caption dropout method can be used.
+Options related to the setting of subsets that caption dropout can be used for.
 
-| Option name | `[general]` | `[[datasets]]` | `[[dataset.subsets]]` |
+| Option Name | `[general]` | `[[datasets]]` | `[[dataset.subsets]]` |
 | ---- | ---- | ---- | ---- |
 | `caption_dropout_every_n_epochs` | o | o | o |
 | `caption_dropout_rate` | o | o | o |
 | `caption_tag_dropout_rate` | o | o | o |
 
-## Behavior when duplicate subsets exist
+## Behavior when there are duplicate subsets
 
-For DreamBooth method datasets, subsets with the same `image_dir` are considered duplicates. For fine-tuning method datasets, subsets with the same `metadata_file` are considered duplicates. If duplicate subsets exist within the dataset, the second and subsequent ones will be ignored.
+In the case of the DreamBooth dataset, if there are multiple `image_dir` directories with the same content, they are considered to be duplicate subsets. For the fine-tuning dataset, if there are multiple `metadata_file` files with the same content, they are considered to be duplicate subsets. If duplicate subsets exist in the dataset, subsequent subsets will be ignored.
 
-On the other hand, if they belong to different datasets, they are not considered duplicates. For example, if you put subsets with the same `image_dir` in different datasets, they are not considered duplicates. This is useful when you want to train the same images at different resolutions.
+However, if they belong to different datasets, they are not considered duplicates. For example, if you have subsets with the same `image_dir` in different datasets, they will not be considered duplicates. This is useful when you want to train with the same image but with different resolutions.
 
 ```toml
-# If they exist in separate datasets, they are not considered duplicates and both will be used for training
+# If data sets exist separately, they are not considered duplicates and are both used for training.
 
 [[datasets]]
 resolution = 512
@@ -224,45 +254,132 @@ resolution = 768
   image_dir = 'C:\hoge'
 ```
 
-## Usage with command line arguments
+## Command Line Argument and Configuration File
 
-Some options in the configuration file have overlapping roles with command line arguments.
+There are options in the configuration file that have overlapping roles with command line argument options.
 
-The following command line argument options are ignored when passing a configuration file:
+The following command line argument options are ignored if a configuration file is passed:
 
 * `--train_data_dir`
 * `--reg_data_dir`
 * `--in_json`
 
-For the following command line argument options, if they are specified simultaneously in the command line argument and configuration file, the value in the configuration file takes precedence. Unless otherwise stated, the options have the same name.
+The following command line argument options are given priority over the configuration file options if both are specified simultaneously. In most cases, they have the same names as the corresponding options in the configuration file.
 
-| Command line argument option | Preferred configuration file option |
-| ---------------------------------- | ---------------------------------- |
-| `--bucket_no_upscale` | |
-| `--bucket_reso_steps` | |
-| `--caption_dropout_every_n_epochs` | |
-| `--caption_dropout_rate` | |
-| `--caption_extension` | |
-| `--caption_tag_dropout_rate` | |
-| `--color_aug` | |
-| `--dataset_repeats` | `num_repeats` |
-| `--enable_bucket` | |
-| `--face_crop_aug_range` | |
-| `--flip_aug` | |
-| `--keep_tokens` | |
-| `--min_bucket_reso` | |
-| `--random_crop` | |
-| `--resolution` | |
-| `--shuffle_caption` | |
-| `--train_batch_size` | `batch_size` |
+| Command Line Argument Option   | Prioritized Configuration File Option |
+| ------------------------------- | ------------------------------------- |
+| `--bucket_no_upscale`           |                                       |
+| `--bucket_reso_steps`           |                                       |
+| `--caption_dropout_every_n_epochs` |                                       |
+| `--caption_dropout_rate`        |                                       |
+| `--caption_extension`           |                                       |
+| `--caption_tag_dropout_rate`    |                                       |
+| `--color_aug`                   |                                       |
+| `--dataset_repeats`             | `num_repeats`                          |
+| `--enable_bucket`               |                                       |
+| `--face_crop_aug_range`         |                                       |
+| `--flip_aug`                    |                                       |
+| `--keep_tokens`                 |                                       |
+| `--min_bucket_reso`              |                                       |
+| `--random_crop`                 |                                       |
+| `--resolution`                  |                                       |
+| `--shuffle_caption`             |                                       |
+| `--train_batch_size`            | `batch_size`                           |
 
-## Error Handling Guide
+## Error Guide
 
-Currently, we are using an external library to check whether the configuration file is written correctly or not. However, the system is not well-maintained, and the error messages can be difficult to understand. We plan to address this issue in the future.
+Currently, we are using an external library to check if the configuration file is written correctly, but the development has not been completed, and there is a problem that the error message is not clear. In the future, we plan to improve this problem.
 
-As a temporary solution, we provide a list of frequently encountered errors and their solutions. If you encounter an error even though you believe everything is correct, or if you cannot understand the error message, please contact us as it may be a bug.
+As a temporary measure, we will list common errors and their solutions. If you encounter an error even though it should be correct or if the error content is not understandable, please contact us as it may be a bug.
 
-* `voluptuous.error.MultipleInvalid: required key not provided @ ...`: This error indicates that a required option has not been specified. You might have forgotten to include the option or may have entered the option name incorrectly.
-  * The location of the error is indicated by the `...` part of the message. For example, if you see the error `voluptuous.error.MultipleInvalid: required key not provided @ data['datasets'][0]['subsets'][0]['image_dir']`, it means that the `image_dir` setting is missing from the 0th `subsets` configuration within the 0th `datasets`.
-* `voluptuous.error.MultipleInvalid: expected int for dictionary value @ ...`: This error indicates that the value format is incorrect. The format of the value is likely incorrect. The `int` part will vary depending on the target option. The "Example Settings" for the options listed in this README may be helpful.
-* `voluptuous.error.MultipleInvalid: extra keys not allowed @ ...`: This error occurs when there are unsupported option names present. You may have entered the option name incorrectly or accidentally included it.
+* `voluptuous.error.MultipleInvalid: required key not provided @ ...`: This error occurs when a required option is not provided. It is highly likely that you forgot to specify the option or misspelled the option name.
+  * The error location is indicated by `...` in the error message. For example, if you encounter an error like `voluptuous.error.MultipleInvalid: required key not provided @ data['datasets'][0]['subsets'][0]['image_dir']`, it means that the `image_dir` option does not exist in the 0th `subsets` of the 0th `datasets` setting.
+* `voluptuous.error.MultipleInvalid: expected int for dictionary value @ ...`: This error occurs when the specified value format is incorrect. It is highly likely that the value format is incorrect. The `int` part changes depending on the target option. The example configurations in this README may be helpful.
+* `voluptuous.error.MultipleInvalid: extra keys not allowed @ ...`: This error occurs when there is an option name that is not supported. It is highly likely that you misspelled the option name or mistakenly included it.
+
+## Miscellaneous
+
+### Multi-line captions
+
+By setting `enable_wildcard = true`, multiple-line captions are also enabled. If the caption file consists of multiple lines, one line is randomly selected as the caption. 
+
+```txt
+1girl, hatsune miku, vocaloid, upper body, looking at viewer, microphone, stage
+a girl with a microphone standing on a stage
+detailed digital art of a girl with a microphone on a stage
+```
+
+It can be combined with wildcard notation.
+
+In metadata files, you can also specify multiple-line captions. In the `.json` metadata file, use `\n` to represent a line break. If the caption file consists of multiple lines, `merge_captions_to_metadata.py` will create a metadata file in this format.
+
+The tags in the metadata (`tags`) are added to each line of the caption.
+
+```json
+{
+    "/path/to/image.png": {
+        "caption": "a cartoon of a frog with the word frog on it\ntest multiline caption1\ntest multiline caption2",
+        "tags": "open mouth, simple background, standing, no humans, animal, black background, frog, animal costume, animal focus"
+    },
+    ...
+}
+```
+
+In this case, the actual caption will be `a cartoon of a frog with the word frog on it, open mouth, simple background ...`, `test multiline caption1, open mouth, simple background ...`, `test multiline caption2, open mouth, simple background ...`, etc.
+
+### Example of configuration file : `secondary_separator`, wildcard notation, `keep_tokens_separator`, etc.
+
+```toml
+[general]
+flip_aug = true
+color_aug = false
+resolution = [1024, 1024]
+
+[[datasets]]
+batch_size = 6
+enable_bucket = true
+bucket_no_upscale = true
+caption_extension = ".txt"
+keep_tokens_separator= "|||"
+shuffle_caption = true
+caption_tag_dropout_rate = 0.1
+secondary_separator = ";;;" # subset 側に書くこともできます / can be written in the subset side
+enable_wildcard = true # 同上 / same as above
+
+  [[datasets.subsets]]
+  image_dir = "/path/to/image_dir"
+  num_repeats = 1
+
+  # ||| の前後はカンマは不要です（自動的に追加されます） / No comma is required before and after ||| (it is added automatically)
+  caption_prefix = "1girl, hatsune miku, vocaloid |||" 
+  
+  # ||| の後はシャッフル、drop されず残ります / After |||, it is not shuffled or dropped and remains
+  # 単純に文字列として連結されるので、カンマなどは自分で入れる必要があります / It is simply concatenated as a string, so you need to put commas yourself
+  caption_suffix = ", anime screencap ||| masterpiece, rating: general"
+```
+
+### Example of caption, secondary_separator notation: `secondary_separator = ";;;"`
+
+```txt
+1girl, hatsune miku, vocaloid, upper body, looking at viewer, sky;;;cloud;;;day, outdoors
+```
+The part `sky;;;cloud;;;day` is replaced with `sky,cloud,day` without shuffling or dropping. When shuffling and dropping are enabled, it is processed as a whole (as one tag). For example, it becomes `vocaloid, 1girl, upper body, sky,cloud,day, outdoors, hatsune miku` (shuffled) or `vocaloid, 1girl, outdoors, looking at viewer, upper body, hatsune miku` (dropped).
+
+### Example of caption, enable_wildcard notation: `enable_wildcard = true`
+
+```txt
+1girl, hatsune miku, vocaloid, upper body, looking at viewer, {simple|white} background
+```
+`simple` or `white` is randomly selected, and it becomes `simple background` or `white background`.
+
+```txt
+1girl, hatsune miku, vocaloid, {{retro style}}
+```
+If you want to include `{` or `}` in the tag string, double them like `{{` or `}}` (in this example, the actual caption used for training is `{retro style}`).
+
+### Example of caption, `keep_tokens_separator` notation: `keep_tokens_separator = "|||"`
+
+```txt
+1girl, hatsune miku, vocaloid ||| stage, microphone, white shirt, smile ||| best quality, rating: general
+```
+It becomes `1girl, hatsune miku, vocaloid, microphone, stage, white shirt, best quality, rating: general` or `1girl, hatsune miku, vocaloid, white shirt, smile, stage, microphone, best quality, rating: general` etc.
